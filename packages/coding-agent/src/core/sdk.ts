@@ -15,6 +15,7 @@ import { getDefaultSessionDir, SessionManager } from "./session-manager.js";
 import { SettingsManager } from "./settings-manager.js";
 import { isInstallTelemetryEnabled } from "./telemetry.js";
 import { time } from "./timings.js";
+import { createRobustToolDispatchStream } from "./tool-dispatcher.js";
 import {
 	createBashTool,
 	createCodingTools,
@@ -302,14 +303,19 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 				throw new Error(auth.error);
 			}
 			const openRouterAttributionHeaders = getOpenRouterAttributionHeaders(model, settingsManager);
-			return streamSimple(model, context, {
-				...options,
-				apiKey: auth.apiKey,
-				headers:
-					openRouterAttributionHeaders || auth.headers || options?.headers
-						? { ...openRouterAttributionHeaders, ...auth.headers, ...options?.headers }
-						: undefined,
-			});
+			return createRobustToolDispatchStream(
+				model,
+				context,
+				{
+					...options,
+					apiKey: auth.apiKey,
+					headers:
+						openRouterAttributionHeaders || auth.headers || options?.headers
+							? { ...openRouterAttributionHeaders, ...auth.headers, ...options?.headers }
+							: undefined,
+				},
+				streamSimple,
+			);
 		},
 		onPayload: async (payload, _model) => {
 			const runner = extensionRunnerRef.current;
